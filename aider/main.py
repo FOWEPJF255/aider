@@ -34,10 +34,8 @@ from aider.models import ModelSettings
 from aider.onboarding import offer_openrouter_oauth, select_default_model
 from aider.repo import ANY_GIT_ERROR, GitRepo
 from aider.report import report_uncaught_exceptions
-from aider.run_cmd import (refresh_known_secrets_from_process_env,
-                           register_known_secrets)
-from aider.versioncheck import (check_version, install_from_main_branch,
-                                install_upgrade)
+from aider.run_cmd import refresh_known_secrets_from_process_env, register_known_secrets
+from aider.versioncheck import check_version, install_from_main_branch, install_upgrade
 from aider.watch import FileWatcher
 
 from .dump import dump  # noqa: F401
