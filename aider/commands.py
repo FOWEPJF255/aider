@@ -969,7 +969,7 @@ class Commands:
         combined_output = None
         try:
             args = "git " + args
-            env = child_process_environ(extra={"GIT_EDITOR": "true"})
+            env = child_process_environ(extra={"GIT_EDITOR": "true"}, profile="git")
             result = subprocess.run(
                 args,
                 stdout=subprocess.PIPE,

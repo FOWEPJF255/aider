@@ -25,20 +25,68 @@ PROVIDER_ENV_KEYS = frozenset(
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_SESSION_TOKEN",
+        "GITHUB_COPILOT_TOKEN",
     }
 )
 
+SENSITIVE_ENV_SUFFIXES = (
+    "_API_KEY",
+    "_TOKEN",
+    "_SECRET",
+    "_ACCESS_KEY",
+)
 
-def child_process_environ(base=None, extra=None):
-    """Copy an environment with model-provider credentials removed.
+# Secret material aider loaded (--api-key, .env, CLI flags). Any env var with a
+# matching value is dropped, even if the name is unrelated.
+KNOWN_SECRET_VALUES = set()
+
+
+def register_known_secrets(*values):
+    for value in values:
+        if value:
+            KNOWN_SECRET_VALUES.add(value)
+
+
+def refresh_known_secrets_from_process_env(environ=None):
+    """Collect secret values from the current process environment."""
+    environ = environ or os.environ
+    for key, value in environ.items():
+        if value and is_sensitive_env_key(key):
+            KNOWN_SECRET_VALUES.add(value)
+
+
+def is_sensitive_env_key(name, profile="run"):
+    upper = name.upper()
+    if profile == "git" and (upper.startswith("GIT_") or upper.startswith("SSH_")):
+        return False
+    if name in PROVIDER_ENV_KEYS:
+        return True
+    if upper.startswith("AWS_"):
+        return True
+    return any(upper.endswith(suffix) for suffix in SENSITIVE_ENV_SUFFIXES)
+
+
+def should_drop_env_var(name, value, profile="run"):
+    if value in KNOWN_SECRET_VALUES:
+        return True
+    return is_sensitive_env_key(name, profile=profile)
+
+
+def child_process_environ(base=None, extra=None, profile="run"):
+    """Copy an environment with provider credentials removed.
 
     Child commands launched for /run, /test, lint, and /git inherit the process
     environment by default. Scrubbing provider credentials reduces accidental
-    leakage into repository-controlled scripts while leaving other vars intact.
+    leakage into repository-controlled scripts.
+
+    profile="git" keeps GIT_* and SSH_* vars (still drops known secret values).
     """
-    env = dict(os.environ if base is None else base)
-    for key in PROVIDER_ENV_KEYS:
-        env.pop(key, None)
+    source = os.environ if base is None else base
+    env = {
+        key: value
+        for key, value in source.items()
+        if not should_drop_env_var(key, value, profile=profile)
+    }
     if extra:
         env.update(extra)
     return env

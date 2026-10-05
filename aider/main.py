@@ -27,6 +27,7 @@ from aider.commands import Commands, SwitchCoder
 from aider.copypaste import ClipboardWatcher
 from aider.deprecated import handle_deprecated_model_args
 from aider.format_settings import format_settings, scrub_sensitive_info
+from aider.run_cmd import refresh_known_secrets_from_process_env, register_known_secrets
 from aider.history import ChatSummary
 from aider.io import InputOutput
 from aider.llm import litellm  # noqa: F401; properly init litellm on launch
@@ -614,6 +615,9 @@ def main(argv=None, input=None, output=None, force_git_root=None, return_coder=F
 
     if args.openai_api_key:
         os.environ["OPENAI_API_KEY"] = args.openai_api_key
+
+    register_known_secrets(args.openai_api_key, args.anthropic_api_key)
+    refresh_known_secrets_from_process_env()
 
     # Handle deprecated model shortcut args
     handle_deprecated_model_args(args, io)
