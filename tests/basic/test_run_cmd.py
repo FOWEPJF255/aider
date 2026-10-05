@@ -95,7 +95,9 @@ def test_run_cmd_subprocess_does_not_expose_openai_key(monkeypatch):
     # Force subprocess path (no interactive pexpect).
     monkeypatch.setattr("aider.run_cmd.sys.stdin.isatty", lambda: False)
     if os.name == "nt":
-        command = 'python -c "import os,sys; sys.exit(0 if os.environ.get(\'OPENAI_API_KEY\') else 1)"'
+        command = (
+            "python -c \"import os,sys; sys.exit(0 if os.environ.get('OPENAI_API_KEY') else 1)\""
+        )
     else:
         command = 'test -n "$OPENAI_API_KEY"'
     exit_code, _output = run_cmd(command)
@@ -110,7 +112,7 @@ def test_run_cmd_subprocess_does_not_expose_renamed_secret_value(monkeypatch):
     monkeypatch.setattr("aider.run_cmd.sys.stdin.isatty", lambda: False)
     if os.name == "nt":
         command = (
-            'python -c "import os,sys; sys.exit(0 if os.environ.get(\'RENAMED_SECRET\') else 1)"'
+            "python -c \"import os,sys; sys.exit(0 if os.environ.get('RENAMED_SECRET') else 1)\""
         )
     else:
         command = 'test -n "$RENAMED_SECRET"'
