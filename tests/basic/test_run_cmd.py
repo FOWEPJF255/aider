@@ -2,13 +2,9 @@ import os
 
 import pytest  # noqa: F401
 
-from aider.run_cmd import (
-    KNOWN_SECRET_VALUES,
-    PROVIDER_ENV_KEYS,
-    child_process_environ,
-    register_known_secrets,
-    run_cmd,
-)
+from aider.run_cmd import (KNOWN_SECRET_VALUES, PROVIDER_ENV_KEYS,
+                           child_process_environ, register_known_secrets,
+                           run_cmd)
 
 
 @pytest.fixture(autouse=True)
