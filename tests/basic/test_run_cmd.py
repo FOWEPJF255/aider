@@ -105,6 +105,57 @@ def test_run_cmd_subprocess_does_not_expose_openai_key(monkeypatch):
     assert exit_code != 0
 
 
+def test_short_secret_values_are_not_registered():
+    register_known_secrets("x", "  ")
+    assert not KNOWN_SECRET_VALUES
+    base = {"FOO": "x", "KEEP_ME": "yes"}
+    scrubbed = child_process_environ(base=base)
+    assert scrubbed["FOO"] == "x"
+
+
+def test_provider_env_keys_are_case_insensitive():
+    base = {
+        "PATH": "/usr/bin",
+        "openai_api_key": "provider-secret-value",
+        "KEEP_ME": "yes",
+    }
+    scrubbed = child_process_environ(base=base)
+    assert "openai_api_key" not in scrubbed
+    assert scrubbed["KEEP_ME"] == "yes"
+
+
+def test_child_process_environ_keeps_aws_region_and_profile():
+    base = {
+        "PATH": "/usr/bin",
+        "AWS_REGION": "us-east-1",
+        "AWS_PROFILE": "default",
+        "AWS_DEFAULT_REGION": "us-west-2",
+        "AWS_ACCESS_KEY_ID": "AKIAEXAMPLE",
+        "KEEP_ME": "yes",
+    }
+    scrubbed = child_process_environ(base=base)
+    assert scrubbed["AWS_REGION"] == "us-east-1"
+    assert scrubbed["AWS_PROFILE"] == "default"
+    assert scrubbed["AWS_DEFAULT_REGION"] == "us-west-2"
+    assert "AWS_ACCESS_KEY_ID" not in scrubbed
+    assert scrubbed["KEEP_ME"] == "yes"
+
+
+def test_arbitrary_env_name_survives_without_pattern_or_registration():
+    """Documents the minimal-base gap for .env keys with arbitrary names."""
+    sentinel = "aider-provider-sentinel"
+    base = {
+        "PATH": "/usr/bin",
+        "MY_CUSTOM_GATEWAY": sentinel,
+        "KEEP_ME": "yes",
+    }
+    scrubbed = child_process_environ(base=base)
+    assert scrubbed["MY_CUSTOM_GATEWAY"] == sentinel
+    register_known_secrets(sentinel)
+    scrubbed = child_process_environ(base=base)
+    assert "MY_CUSTOM_GATEWAY" not in scrubbed
+
+
 def test_run_cmd_subprocess_does_not_expose_renamed_secret_value(monkeypatch):
     sentinel = "aider-provider-sentinel"
     monkeypatch.setenv("RENAMED_SECRET", sentinel)

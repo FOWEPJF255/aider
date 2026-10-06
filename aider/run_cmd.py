@@ -39,11 +39,24 @@ SENSITIVE_ENV_SUFFIXES = (
 # Secret material aider loaded (--api-key, .env, CLI flags). Any env var with a
 # matching value is dropped, even if the name is unrelated.
 KNOWN_SECRET_VALUES = set()
+MIN_SECRET_VALUE_LEN = 8
+
+AWS_CREDENTIAL_KEY_SUFFIXES = (
+    "_ACCESS_KEY_ID",
+    "_SECRET_ACCESS_KEY",
+    "_SESSION_TOKEN",
+    "_SECURITY_TOKEN",
+)
+
+
+def _is_registerable_secret_value(value):
+    text = str(value or "").strip()
+    return bool(text) and len(text) >= MIN_SECRET_VALUE_LEN
 
 
 def register_known_secrets(*values):
     for value in values:
-        if value:
+        if _is_registerable_secret_value(value):
             KNOWN_SECRET_VALUES.add(value)
 
 
@@ -51,17 +64,23 @@ def refresh_known_secrets_from_process_env(environ=None):
     """Collect secret values from the current process environment."""
     environ = environ or os.environ
     for key, value in environ.items():
-        if value and is_sensitive_env_key(key):
+        if _is_registerable_secret_value(value) and is_sensitive_env_key(key):
             KNOWN_SECRET_VALUES.add(value)
+
+
+def _is_aws_credential_key(upper):
+    if upper in PROVIDER_ENV_KEYS:
+        return True
+    return any(upper.endswith(suffix) for suffix in AWS_CREDENTIAL_KEY_SUFFIXES)
 
 
 def is_sensitive_env_key(name, profile="run"):
     upper = name.upper()
     if profile == "git" and (upper.startswith("GIT_") or upper.startswith("SSH_")):
         return False
-    if name in PROVIDER_ENV_KEYS:
+    if upper in PROVIDER_ENV_KEYS:
         return True
-    if upper.startswith("AWS_"):
+    if _is_aws_credential_key(upper):
         return True
     return any(upper.endswith(suffix) for suffix in SENSITIVE_ENV_SUFFIXES)
 
